@@ -1,4 +1,4 @@
-# Node & Docker - Dockerizing a Node.js web app
+# Dockerizing a Node.js web app
 
 ## Prerequisites
 
@@ -12,20 +12,19 @@ Go to the directory that has your `Dockerfile` and run the following command to 
 The `-t` flag lets you tag your image so it's easier to find later using the docker images command:
 
 ```sh
-$ docker build . -t my-node-web-app
+docker build . -t my-node-web-app
 ```
 
 Your image will now be listed by Docker:
 
 ``` sh
-$ docker images
+docker images
 ```
 
 ```
 # Example
-REPOSITORY                      TAG        ID              CREATED
-node                            18         78b037dbb659    2 weeks ago
-my-node-web-app                 latest     d64d3505b0d2    1 minute ago
+REPOSITORY        TAG       IMAGE ID       CREATED         SIZE
+my-node-web-app   latest    19c9f9ba0e3c   5 seconds ago   1.1GB
 ```
 
 ### 2. Run the image
@@ -35,164 +34,296 @@ The `-p` flag redirects a public port to a private port inside the container.
 Run the image you previously built:
 
 ```sh
-$ docker run -p 49160:8080 -d my-node-web-app
+docker run -p 49160:8080 -d my-node-web-app
+```
+
+### 3. Print the output of your app
+
+Get the container's ID:
+
+```sh
+docker ps
+```
+
+```
+CONTAINER ID   IMAGE             COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+7c1c9b4f6457   my-node-web-app   "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:49160->8080/tcp, :::49160->8080/tcp   elastic_benz
+```
+
+Print app output with the container's ID:
+
+```sh
+docker logs 7c1c9b4f6457
+```
+
+```
+Running on http://0.0.0.0:8080
+```
+
+If you need to go inside the container, you can use the exec command:
+
+```sh
+docker exec -it 7c1c9b4f6457 /bin/bash
+```
+
+```
+root@7c1c9b4f6457:/usr/src/app#
+```
+
+Now, you can execute commands in the container. For example:
+
+```
+root@7c1c9b4f6457:/usr/src/app# ls -l 
+total 44
+-rw-r--r--  1 root root   370 Sep 22 08:08 Dockerfile
+-rw-r--r--  1 root root  3431 Sep 22 09:23 README.md
+drwxr-xr-x 60 root root  4096 Sep 22 08:11 node_modules
+-rw-r--r--  1 root root 22276 Sep 22 08:11 package-lock.json
+-rw-r--r--  1 root root   264 Sep 22 08:07 package.json
+-rw-r--r--  1 root root   290 Sep 22 08:07 server.js
+```
+
+Just type the `exit` command to exit the container:
+
+```
+root@f95121aa40b6:/usr/src/app# exit
+exit
+```
+
+### 4. Test your app
+
+To test your app, get the port of your app that Docker mapped:
+
+```sh
+docker ps
+```
+
+```
+CONTAINER ID   IMAGE             COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+7c1c9b4f6457   my-node-web-app   "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:49160->8080/tcp, :::49160->8080/tcp   elastic_benz
+```
+
+In the example above, Docker mapped the `8080` port inside of the container to the port `49160` on your machine.
+Now you can call your app using curl:
+
+```sh
+curl -i localhost:49160
+```
+
+```
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: text/html; charset=utf-8
+Content-Length: 11
+ETag: W/"b-Ck1VqNd45QIvq3AZd8XYQLvEhtA"
+Date: Fri, 22 Sep 2023 12:24:14 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+Hello World
+```
+
+Install [cURL](https://fr.wikipedia.org/wiki/CURL) if needed via:
+
+```sh
+sudo apt-get install curl
+```
+
+Or use directly the file `localhost.http` of this repository with the HTTP Client of your IDE
+(for example with [VSCode REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) or [PHPStorm HTTP Client](https://www.jetbrains.com/help/phpstorm/http-client-in-product-code-editor.html)):
+
+```
+# localhost.http
+GET http://localhost:49160
+```
+
+### 5. Shut down the image
+
+In order to shut down the app we started, we run the `kill` command.
+This uses the container's ID, which in this example was `7c1c9b4f6457`.
+
+```sh
+docker kill 7c1c9b4f6457
+```
+
+```
+7c1c9b4f6457
+```
+
+Confirm that the app has stopped:
+
+```sh
+curl -i localhost:49160
+```
+
+```
+curl: (7) Failed to connect to localhost port 49160: Connection refused
 ```
 
 ## Docker: Essential commands
 
-### Build Docker images from a Dockerfile and a "context"
+### Build
+
+Build Docker images from a Dockerfile and a "context":
 
 ```sh
-$ docker build
+docker build
 ```
 
-### Show all top level images, their repository and tags, and their size
+### Images
+
+Show all top level images, their repository and tags, and their size:
 
 ```sh
-$ docker images
+docker images
 ```
 
-### List all running containers
+Remove one or more images:
 
 ```sh
-$ docker ps
+docker rmi <image-id> 
 ```
 
-### List all containers stopped, running
+Remove all images:
 
 ```sh
-$ docker ps -a
+docker rmi $(docker images -q) 
 ```
 
-### Stop the container which is running
+### Containers
+
+List all running containers:
 
 ```sh
-$ docker stop <container-id>
+docker ps
 ```
 
-### Stops all running containers
+List all containers stopped, running:
 
 ```sh
-$ docker stop $(docker ps -a -q) 
+docker ps -a
 ```
 
-### Start the container which is stopped
+Stop the container which is running:
 
 ```sh
-$ docker start <container-id>
+docker stop <container-id>
 ```
 
-### Restart the container which is running
+Stops all running containers:
 
 ```sh
-$ docker restart <container-id>
+docker stop $(docker ps -a -q) 
 ```
 
-### List port mappings of a specific container
+Start the container which is stopped:
 
 ```sh
-$ docker port <container-id>
+docker start <container-id>
 ```
 
-### Remove the stopped container
+Restart the container which is running:
 
 ```sh
-$ docker rm <container-id> or <name>
+docker restart <container-id>
 ```
 
-### Remove the running container forcefully
+List port mappings of a specific container:
 
 ```sh
-$ docker rm -f <container-id> or <name>
+docker port <container-id>
 ```
 
-### Pull the image from docker hub repository
+Remove one or more stopped containers:
 
 ```sh
-$ docker pull <image-info>
+docker rm <container-id> 
 ```
 
-### Connect to linux container and execute commands in container
+Remove all stopped containers:
 
 ```sh
-$ docker exec -it <container-name> /bin/bash
+docker container prune  
+```
+
+```sh
+docker rm $(docker ps -a -q) 
+```
+
+Remove the running container forcefully:
+
+```sh
+docker rm -f <container-id>
+```
+
+Update and stop a container that is in a crash-loop:
+
+```sh
+docker update –restart=no && docker stop 
+```
+
+Display the running processes of a container:
+
+```sh
+docker top <container-id>
+```
+
+### Exec
+
+Connect to linux container and execute commands in container:
+
+```sh
+docker exec -it <container-id> /bin/bash
 ```
 
 Bash shell with root if container is running in a different user context:
 
 ```sh
-$ docker exec -i -t -u root /bin/bash
+docker exec -itu <container-id> root /bin/bash
 ```
 
 If bash is not available use `/bin/sh`:
 
 ```sh
-$ docker exec -it <container-name> /bin/sh
+docker exec -itu <container-id> /bin/sh
 ```
 
-### Remove one or more images
+### Pull
+
+Pull the image from docker hub repository:
 
 ```sh
-$ docker rmi <image-id> 
+docker pull <image-info>
 ```
 
-### Remove all images
+### Hub
+
+Logout from docker hub:
 
 ```sh
-$ docker rmi $(docker images -q) 
+docker logout
 ```
 
-### Logout from docker hub
+Login to docker hub
 
 ```sh
-$ docker logout
+docker login -u username -p password
 ```
 
-### Login to docker hub
+### Stats
+
+Display a live stream of container(s) resource usage statistics:
 
 ```sh
-$ docker login -u username -p password
+docker stats
 ```
 
-### Display a live stream of container(s) resource usage statistics
+### Version
+
+Show the Docker version information:
 
 ```sh
-$ docker stats
-```
-
-### Display the running processes of a container
-
-```sh
-$ docker top <container-id> or <name>
-```
-
-### Show the Docker version information
-
-```sh
-$ docker version
-```
-
-### Remove one or more containers
-
-```sh
-$ docker rm <container-id> 
-```
-
-### Remove all stopped containers
-
-```sh
-$ docker container prune  
-```
-or
-
-```sh
-$ docker rm $(docker ps -a -q) 
-```
-
-### Update and stop a container that is in a crash-loop
-
-```sh
-$ docker update –restart=no && docker stop 
+docker version
 ```
 
 ## Resources
